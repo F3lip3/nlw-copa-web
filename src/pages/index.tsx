@@ -13,11 +13,12 @@ interface HomeProps {
 }
 
 export default function Home({
-  poolsCount,
+  poolsCount: serverPoolsCount,
   guessesCount,
   usersCount
 }: HomeProps) {
   const [poolTitle, setPoolTitle] = useState('');
+  const [poolsCount, setPoolsCount] = useState(serverPoolsCount);
 
   async function createPool(event: FormEvent) {
     event.preventDefault();
@@ -35,6 +36,7 @@ export default function Home({
       );
 
       setPoolTitle('');
+      setPoolsCount(cnt => cnt + 1);
     } catch (err) {
       alert('Falha ao criar o bolão. Tente novamente!');
     }
@@ -107,7 +109,7 @@ export default function Home({
   );
 }
 
-export const getServerSideProps = async () => {
+export const getStaticProps = async () => {
   const [poolCountResponse, guessesCountResponse, usersCountResponse] =
     await Promise.all([
       api.get('http://localhost:3333/pools/count'),
@@ -120,6 +122,7 @@ export const getServerSideProps = async () => {
       poolsCount: poolCountResponse.data.count,
       guessesCount: guessesCountResponse.data.count,
       usersCount: usersCountResponse.data.count
-    }
+    },
+    revalidate: 60
   };
 };
