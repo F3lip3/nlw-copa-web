@@ -1,14 +1,45 @@
 import Image from 'next/image';
+import { FormEvent, useState } from 'react';
 import appPreviewImage from '../assets/app-nlw-copa-preview.png';
 import iconCheckImage from '../assets/icon-check.svg';
 import logoImage from '../assets/logo.svg';
 import usersAvatarExampleImage from '../assets/users-avatar-examples.png';
+import { api } from '../lib/axios';
 
 interface HomeProps {
-  count: number;
+  poolsCount: number;
+  guessesCount: number;
+  usersCount: number;
 }
 
-export default function Home(props: HomeProps) {
+export default function Home({
+  poolsCount,
+  guessesCount,
+  usersCount
+}: HomeProps) {
+  const [poolTitle, setPoolTitle] = useState('');
+
+  async function createPool(event: FormEvent) {
+    event.preventDefault();
+    try {
+      const response = await api.post('/pools', {
+        title: poolTitle
+      });
+
+      const { code } = response.data;
+
+      await navigator.clipboard.writeText(code);
+
+      alert(
+        'Bolão criado com sucesso! O código foi copiado para a área de transferência.'
+      );
+
+      setPoolTitle('');
+    } catch (err) {
+      alert('Falha ao criar o bolão. Tente novamente!');
+    }
+  }
+
   return (
     <div className="max-w-[1124px] h-screen mx-auto grid grid-cols-2 items-center gap-28">
       <main>
@@ -21,17 +52,19 @@ export default function Home(props: HomeProps) {
         <div className="mt-10 flex items-center gap-2">
           <Image src={usersAvatarExampleImage} alt="" />
           <strong className="text-gray-100 text-xl">
-            <span className="text-ignite-500">+12.592</span> pessoas já estão
-            usando
+            <span className="text-ignite-500">+{usersCount}</span> pessoas já
+            estão usando
           </strong>
         </div>
 
-        <form className="flex mt-10 gap-2">
+        <form className="flex mt-10 gap-2" onSubmit={createPool}>
           <input
             type="text"
             required
             placeholder="Qual nome do seu bolão?"
-            className="flex-1 px-6 py-4 rounded bg-gray-800 border border-gray-600 text-sm"
+            className="flex-1 px-6 py-4 rounded bg-gray-800 border border-gray-600 text-gray-100 text-sm"
+            onChange={event => setPoolTitle(event.target.value)}
+            value={poolTitle}
           />
           <button
             type="submit"
@@ -51,7 +84,7 @@ export default function Home(props: HomeProps) {
           <div className="flex items-center gap-6">
             <Image src={iconCheckImage} alt="" />
             <div className="flex flex-col">
-              <span className="font-bold text-2xl">+2.034</span>
+              <span className="font-bold text-2xl">+{poolsCount}</span>
               <span>Bolões criados</span>
             </div>
           </div>
@@ -59,7 +92,7 @@ export default function Home(props: HomeProps) {
           <div className="flex items-center gap-6">
             <Image src={iconCheckImage} alt="" />
             <div className="flex flex-col">
-              <span className="font-bold text-2xl">+192.847</span>
+              <span className="font-bold text-2xl">+{guessesCount}</span>
               <span>Palpites enviados</span>
             </div>
           </div>
@@ -74,13 +107,19 @@ export default function Home(props: HomeProps) {
   );
 }
 
-// export const getServerSideProps = async () => {
-//   const response = await fetch('http://localhost:3333/pools/count');
-//   const data = await response.json();
+export const getServerSideProps = async () => {
+  const [poolCountResponse, guessesCountResponse, usersCountResponse] =
+    await Promise.all([
+      api.get('http://localhost:3333/pools/count'),
+      api.get('http://localhost:3333/guesses/count'),
+      api.get('http://localhost:3333/users/count')
+    ]);
 
-//   return {
-//     props: {
-//       count: data.count
-//     }
-//   };
-// };
+  return {
+    props: {
+      poolsCount: poolCountResponse.data.count,
+      guessesCount: guessesCountResponse.data.count,
+      usersCount: usersCountResponse.data.count
+    }
+  };
+};
